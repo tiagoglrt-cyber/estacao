@@ -16,10 +16,19 @@
   .badge.demo    { background:#1a1a0a; border:1px solid #3a3a0a; color:#facc15; }
   .badge.loading { background:#1a1a2a; border:1px solid #2a2a3a; color:#94a3b8; }
   .dot { width:6px; height:6px; border-radius:50%; }
-  .dot.online  { background:#4ade80; animation:pulse 2s infinite; }
-  .dot.demo    { background:#facc15; }
-  .dot.loading { background:#94a3b8; }
+  .dot.online { background:#4ade80; animation:pulse 2s infinite; }
+  .dot.demo   { background:#facc15; }
+  .dot.loading{ background:#94a3b8; }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+  /* Navegação de abas */
+  .nav { display:flex; gap:4px; margin-bottom:18px; background:#161b27; border:1px solid #1e2535; border-radius:10px; padding:4px; }
+  .nav-btn { flex:1; padding:8px; border-radius:7px; font-size:12px; cursor:pointer; border:none; background:transparent; color:#475569; transition:all .15s; }
+  .nav-btn.active { background:#1e2535; color:#e2e8f0; font-weight:500; }
+
+  .page { display:none; }
+  .page.active { display:block; }
+
   .warn { background:#1c1a08; border:1px solid #3a3510; border-radius:10px; padding:9px 12px; font-size:11px; color:#fbbf24; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
   .cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
   .card { background:#161b27; border:1px solid #1e2535; border-radius:12px; padding:14px 12px; border-top:2px solid; }
@@ -51,6 +60,18 @@
   .footer { display:flex; justify-content:space-between; align-items:center; margin-top:12px; }
   .timestamp { font-size:10px; color:#334155; }
   .refresh-btn { font-size:11px; color:#475569; background:#161b27; border:1px solid #1e2535; border-radius:6px; padding:4px 10px; cursor:pointer; }
+
+  /* Histórico */
+  .hist-table { width:100%; border-collapse:collapse; font-size:11px; }
+  .hist-table th { color:#64748b; text-align:left; padding:8px 6px; border-bottom:1px solid #1e2535; font-weight:500; font-size:10px; text-transform:uppercase; }
+  .hist-table td { padding:10px 6px; border-bottom:1px solid #1e2535; color:#e2e8f0; }
+  .hist-table tr:last-child td { border:none; }
+  .hist-table tr:hover td { background:#1e2535; }
+  .badge-chuva { display:inline-block; font-size:10px; font-weight:600; padding:2px 7px; border-radius:8px; background:#1a0a2a; color:#818cf8; }
+  .hist-chart-card { background:#161b27; border:1px solid #1e2535; border-radius:12px; padding:14px; margin-bottom:14px; }
+  .hist-tabs { display:flex; gap:4px; margin-bottom:12px; }
+  .hist-tab { padding:4px 12px; border-radius:6px; font-size:11px; cursor:pointer; border:none; background:transparent; color:#475569; }
+  .hist-tab.active { background:#1e2535; color:#e2e8f0; }
 </style>
 </head>
 <body>
@@ -66,119 +87,162 @@
   </div>
 </div>
 
-<div class="warn" id="warnBox" style="display:none">
-  ⚠️ Exibindo dados de demonstração. ESP32 ainda não enviou dados hoje.
-  <button onclick="carregar(true)" style="background:#3a3510;border:none;color:#fbbf24;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">↻</button>
+<!-- Navegação -->
+<div class="nav">
+  <button class="nav-btn active" onclick="showPage('hoje', this)">🌡 Hoje</button>
+  <button class="nav-btn" onclick="showPage('historico', this)">📅 Histórico</button>
 </div>
 
-<div class="cards">
-  <div class="card" style="border-top-color:#f97316">
-    <div class="card-label">Temperatura</div>
-    <div class="card-val" id="vTemp">--<span class="card-unit">°C</span></div>
-    <div class="card-tag" id="tTemp" style="background:#3a1a0a;color:#f97316">--</div>
-    <div class="bar-wrap"><div class="bar-fill" id="bTemp" style="background:#f97316;width:0%"></div></div>
+<!-- PÁGINA HOJE -->
+<div class="page active" id="page-hoje">
+  <div class="warn" id="warnBox" style="display:none">
+    ⚠️ Exibindo dados de demonstração. ESP32 ainda não enviou dados hoje.
+    <button onclick="carregar(true)" style="background:#3a3510;border:none;color:#fbbf24;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">↻</button>
   </div>
-  <div class="card" style="border-top-color:#38bdf8">
-    <div class="card-label">Umidade</div>
-    <div class="card-val" id="vUmid">--<span class="card-unit">%</span></div>
-    <div class="card-tag" id="tUmid" style="background:#0a1a2a;color:#38bdf8">--</div>
-    <div class="bar-wrap"><div class="bar-fill" id="bUmid" style="background:#38bdf8;width:0%"></div></div>
+
+  <div class="cards">
+    <div class="card" style="border-top-color:#f97316">
+      <div class="card-label">Temperatura</div>
+      <div class="card-val" id="vTemp">--<span class="card-unit">°C</span></div>
+      <div class="card-tag" id="tTemp" style="background:#3a1a0a;color:#f97316">--</div>
+      <div class="bar-wrap"><div class="bar-fill" id="bTemp" style="background:#f97316;width:0%"></div></div>
+    </div>
+    <div class="card" style="border-top-color:#38bdf8">
+      <div class="card-label">Umidade</div>
+      <div class="card-val" id="vUmid">--<span class="card-unit">%</span></div>
+      <div class="card-tag" id="tUmid" style="background:#0a1a2a;color:#38bdf8">--</div>
+      <div class="bar-wrap"><div class="bar-fill" id="bUmid" style="background:#38bdf8;width:0%"></div></div>
+    </div>
+    <div class="card" style="border-top-color:#818cf8">
+      <div class="card-label">Chuva hoje</div>
+      <div class="card-val" id="vRain">--<span class="card-unit">mm</span></div>
+      <div class="card-tag" id="tRain" style="background:#1a0a2a;color:#818cf8">--</div>
+      <div class="bar-wrap"><div class="bar-fill" id="bRain" style="background:#818cf8;width:0%"></div></div>
+    </div>
+    <div class="card" style="border-top-color:#34d399">
+      <div class="card-label">Última leitura</div>
+      <div class="card-val" id="vTime" style="font-size:22px">--:--</div>
+      <div class="card-tag" id="vDate" style="background:#0a1a1a;color:#34d399">--/--/----</div>
+    </div>
   </div>
-  <div class="card" style="border-top-color:#818cf8">
-    <div class="card-label">Chuva hoje</div>
-    <div class="card-val" id="vRain">--<span class="card-unit">mm</span></div>
-    <div class="card-tag" id="tRain" style="background:#1a0a2a;color:#818cf8">--</div>
-    <div class="bar-wrap"><div class="bar-fill" id="bRain" style="background:#818cf8;width:0%"></div></div>
+
+  <div class="chart-card">
+    <div class="chart-hdr">
+      <div class="chart-title">Histórico do dia</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchChart('temperatura',this)">Temperatura</button>
+        <button class="tab" onclick="switchChart('umidade',this)">Umidade</button>
+        <button class="tab" onclick="switchChart('chuva',this)">Chuva</button>
+      </div>
+    </div>
+    <div style="position:relative;height:170px"><canvas id="chart"></canvas></div>
   </div>
-  <div class="card" style="border-top-color:#34d399">
-    <div class="card-label">Última leitura</div>
-    <div class="card-val" id="vTime" style="font-size:22px">--:--</div>
-    <div class="card-tag" id="vDate" style="background:#0a1a1a;color:#34d399">--/--/----</div>
+
+  <div class="bottom">
+    <div class="mini">
+      <div class="mini-title">Resumo</div>
+      <div class="stat-row"><span class="stat-label">Temp. máx.</span><span class="stat-val" id="sTmax">--</span></div>
+      <div class="stat-row"><span class="stat-label">Temp. mín.</span><span class="stat-val" id="sTmin">--</span></div>
+      <div class="stat-row"><span class="stat-label">Umid. máx.</span><span class="stat-val" id="sUmax">--</span></div>
+      <div class="stat-row"><span class="stat-label">Umid. mín.</span><span class="stat-val" id="sUmin">--</span></div>
+      <div class="stat-row"><span class="stat-label">Chuva total</span><span class="stat-val" id="sRain">--</span></div>
+    </div>
+    <div class="mini">
+      <div class="mini-title">Condições</div>
+      <div class="gauge-item">
+        <div class="gauge-lbl"><span class="gauge-name">Temperatura</span><span class="gauge-val" id="gTv">--</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="gTb" style="background:#f97316;width:0%"></div></div>
+      </div>
+      <div class="gauge-item">
+        <div class="gauge-lbl"><span class="gauge-name">Umidade</span><span class="gauge-val" id="gUv">--</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="gUb" style="background:#38bdf8;width:0%"></div></div>
+      </div>
+      <div class="gauge-item">
+        <div class="gauge-lbl"><span class="gauge-name">Índice calor</span><span class="gauge-val" id="gHv">--</span></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="gHb" style="background:#818cf8;width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="timestamp" id="att"></div>
+    <button class="refresh-btn" onclick="carregar(true)">↻ Atualizar</button>
   </div>
 </div>
 
-<div class="chart-card">
-  <div class="chart-hdr">
-    <div class="chart-title">Histórico do dia</div>
-    <div class="tabs">
-      <button class="tab active" onclick="switchChart('temperatura',this)">Temperatura</button>
-      <button class="tab" onclick="switchChart('umidade',this)">Umidade</button>
-      <button class="tab" onclick="switchChart('chuva',this)">Chuva</button>
+<!-- PÁGINA HISTÓRICO -->
+<div class="page" id="page-historico">
+  <div class="hist-chart-card">
+    <div class="hist-tabs">
+      <button class="hist-tab active" onclick="switchHistChart('temp_max', this)">Temp. Máx</button>
+      <button class="hist-tab" onclick="switchHistChart('temp_min', this)">Temp. Mín</button>
+      <button class="hist-tab" onclick="switchHistChart('chuva_total', this)">Chuva</button>
     </div>
+    <div style="position:relative;height:180px"><canvas id="histChart"></canvas></div>
   </div>
-  <div style="position:relative;height:170px">
-    <canvas id="chart"></canvas>
-  </div>
-</div>
 
-<div class="bottom">
-  <div class="mini">
-    <div class="mini-title">Resumo</div>
-    <div class="stat-row"><span class="stat-label">Temp. máx.</span><span class="stat-val" id="sTmax">--</span></div>
-    <div class="stat-row"><span class="stat-label">Temp. mín.</span><span class="stat-val" id="sTmin">--</span></div>
-    <div class="stat-row"><span class="stat-label">Umid. máx.</span><span class="stat-val" id="sUmax">--</span></div>
-    <div class="stat-row"><span class="stat-label">Umid. mín.</span><span class="stat-val" id="sUmin">--</span></div>
-    <div class="stat-row"><span class="stat-label">Chuva total</span><span class="stat-val" id="sRain">--</span></div>
+  <div class="chart-card" style="padding:0;overflow:hidden">
+    <table class="hist-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Máx</th>
+          <th>Mín</th>
+          <th>Umid</th>
+          <th>Chuva</th>
+        </tr>
+      </thead>
+      <tbody id="histBody">
+        <tr><td colspan="5" style="text-align:center;color:#475569;padding:20px">Carregando...</td></tr>
+      </tbody>
+    </table>
   </div>
-  <div class="mini">
-    <div class="mini-title">Condições</div>
-    <div class="gauge-item">
-      <div class="gauge-lbl"><span class="gauge-name">Temperatura</span><span class="gauge-val" id="gTv">--</span></div>
-      <div class="gauge-bar"><div class="gauge-fill" id="gTb" style="background:#f97316;width:0%"></div></div>
-    </div>
-    <div class="gauge-item">
-      <div class="gauge-lbl"><span class="gauge-name">Umidade</span><span class="gauge-val" id="gUv">--</span></div>
-      <div class="gauge-bar"><div class="gauge-fill" id="gUb" style="background:#38bdf8;width:0%"></div></div>
-    </div>
-    <div class="gauge-item">
-      <div class="gauge-lbl"><span class="gauge-name">Índice calor</span><span class="gauge-val" id="gHv">--</span></div>
-      <div class="gauge-bar"><div class="gauge-fill" id="gHb" style="background:#818cf8;width:0%"></div></div>
-    </div>
-  </div>
-</div>
-
-<div class="footer">
-  <div class="timestamp" id="att"></div>
-  <button class="refresh-btn" onclick="carregar(true)">↻ Atualizar</button>
 </div>
 
 <script>
 const SUPA_URL = "https://gitmitnagcqgbgkevssg.supabase.co/rest/v1";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpdG1pdG5hZ2NxZ2Jna2V2c3NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MjgzOTEsImV4cCI6MjA5NDEwNDM5MX0.XqZsDeLNNeeizGQrVjzmCk2VbcqhggSqRUYluo0lfjo";
+const HDR = {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY};
 
 const DEMO = Array.from({length:8},(_,i)=>({
   hora:`${String(i*2).padStart(2,'0')}:00:00`,
-  data:new Date().toISOString().split('T')[0],
+  data:new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-'),
   temperatura:(22+Math.sin(i)*4).toFixed(2),
   umidade:(65+Math.cos(i)*10).toFixed(2),
   chuva:i===3?3:i===4?5:0
 }));
 
-let dados=[], metrica='temperatura', chartObj=null, modoDemo=false;
+let dados=[], metrica='temperatura', chartObj=null, histChartObj=null, modoDemo=false, resumos=[];
+let histMetrica='temp_max';
 
 function tagT(t){ return t<15?'Frio':t<20?'Fresco':t<25?'Agradável':t<30?'Quente':t<35?'Muito quente':'Extremo'; }
 function tagU(u){ return u<30?'Muito seco':u<50?'Seco':u<65?'Confortável':u<80?'Úmido':'Muito úmido'; }
 function tagR(r){ return r===0?'Sem chuva':r<5?'Fraca':r<20?'Moderada':r<50?'Forte':'Torrencial'; }
 function corT(t){ return t<15?'#3b82f6':t<20?'#06b6d4':t<25?'#22c55e':t<30?'#eab308':t<35?'#f97316':'#ef4444'; }
+function fmtData(d){ return d?d.split('-').reverse().join('/'):'--'; }
 
 function setBadge(mode){
-  const b=document.getElementById('badge'), d=document.getElementById('dot'), t=document.getElementById('badgeTxt');
+  const b=document.getElementById('badge'),d=document.getElementById('dot'),t=document.getElementById('badgeTxt');
   b.className='badge '+mode; d.className='dot '+mode;
   t.textContent=mode==='online'?'Online':mode==='demo'?'Demonstração':'Carregando...';
 }
 
+function showPage(page, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  btn.classList.add('active');
+  if(page==='historico') carregarHistorico();
+}
+
 async function carregar(forcar=false){
   try {
-   const hoje=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
-    const r=await fetch(`${SUPA_URL}/leituras_horarias?data=eq.${hoje}&order=hora.asc`,
-      {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+    const hoje=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
+    const r=await fetch(`${SUPA_URL}/leituras_horarias?data=eq.${hoje}&order=hora.asc`,{headers:HDR});
     if(!r.ok) throw new Error();
     const json=await r.json();
-    if(json.length){
-      dados=json; modoDemo=false;
-      setBadge('online');
-      document.getElementById('warnBox').style.display='none';
-    } else { throw new Error(); }
+    if(json.length){ dados=json; modoDemo=false; setBadge('online'); document.getElementById('warnBox').style.display='none'; }
+    else throw new Error();
   } catch {
     if(forcar||dados.length===0){ dados=DEMO; modoDemo=true; }
     setBadge(modoDemo?'demo':'online');
@@ -188,18 +252,82 @@ async function carregar(forcar=false){
   document.getElementById('att').textContent='Atualizado: '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 }
 
+async function carregarHistorico(){
+  try {
+    const r=await fetch(`${SUPA_URL}/resumo_diario?order=data.desc&limit=30`,{headers:HDR});
+    if(!r.ok) throw new Error();
+    resumos=await r.json();
+    renderHistorico();
+    desenharHistChart(histMetrica);
+  } catch {
+    document.getElementById('histBody').innerHTML='<tr><td colspan="5" style="text-align:center;color:#f87171;padding:20px">Erro ao carregar histórico</td></tr>';
+  }
+}
+
+function renderHistorico(){
+  if(!resumos.length){
+    document.getElementById('histBody').innerHTML='<tr><td colspan="5" style="text-align:center;color:#475569;padding:20px">Sem dados históricos</td></tr>';
+    return;
+  }
+  document.getElementById('histBody').innerHTML = resumos.map(r=>`
+    <tr>
+      <td style="color:#94a3b8">${fmtData(r.data)}</td>
+      <td style="color:#f97316">${parseFloat(r.temp_max).toFixed(1)}°C</td>
+      <td style="color:#38bdf8">${parseFloat(r.temp_min).toFixed(1)}°C</td>
+      <td style="color:#38bdf8">${parseFloat(r.umid_media).toFixed(0)}%</td>
+      <td><span class="badge-chuva">${parseInt(r.chuva_total)}mm</span></td>
+    </tr>
+  `).join('');
+}
+
+function desenharHistChart(m){
+  if(histChartObj) histChartObj.destroy();
+  const cores={temp_max:'#f97316',temp_min:'#38bdf8',chuva_total:'#818cf8'};
+  const labels={temp_max:'Temp. Máx (°C)',temp_min:'Temp. Mín (°C)',chuva_total:'Chuva (mm)'};
+  const inv=[...resumos].reverse();
+  histChartObj=new Chart(document.getElementById('histChart'),{
+    type: m==='chuva_total'?'bar':'line',
+    data:{
+      labels:inv.map(r=>fmtData(r.data)),
+      datasets:[{
+        label:labels[m],
+        data:inv.map(r=>parseFloat(r[m])),
+        borderColor:cores[m],
+        backgroundColor:m==='chuva_total'?cores[m]+'99':cores[m]+'22',
+        borderWidth:m==='chuva_total'?0:2,
+        pointRadius:3,pointHoverRadius:5,tension:0.4,fill:m!=='chuva_total'
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e2535',titleColor:'#94a3b8',bodyColor:'#e2e8f0',borderColor:'#334155',borderWidth:1}},
+      scales:{
+        x:{grid:{color:'#1e2535'},ticks:{color:'#475569',font:{size:9}}},
+        y:{grid:{color:'#1e2535'},ticks:{color:'#475569',font:{size:9}}}
+      }
+    }
+  });
+}
+
+function switchHistChart(m,btn){
+  histMetrica=m;
+  document.querySelectorAll('.hist-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  desenharHistChart(m);
+}
+
 function atualizar(){
   if(!dados.length) return;
   const ul=dados[dados.length-1];
-  const t=parseFloat(ul.temperatura), u=parseFloat(ul.umidade);
+  const t=parseFloat(ul.temperatura),u=parseFloat(ul.umidade);
   const r=dados.reduce((s,d)=>s+parseInt(d.chuva||0),0);
-  const ts=dados.map(d=>parseFloat(d.temperatura)), us=dados.map(d=>parseFloat(d.umidade));
+  const ts=dados.map(d=>parseFloat(d.temperatura)),us=dados.map(d=>parseFloat(d.umidade));
 
   document.getElementById('vTemp').innerHTML=t.toFixed(1)+'<span class="card-unit">°C</span>';
   document.getElementById('vUmid').innerHTML=u.toFixed(0)+'<span class="card-unit">%</span>';
   document.getElementById('vRain').innerHTML=r+'<span class="card-unit">mm</span>';
   document.getElementById('vTime').textContent=ul.hora?ul.hora.substring(0,5):'--:--';
-  document.getElementById('vDate').textContent=ul.data?ul.data.split('-').reverse().join('/'):'--';
+  document.getElementById('vDate').textContent=fmtData(ul.data);
 
   document.getElementById('tTemp').textContent=tagT(t);
   document.getElementById('tUmid').textContent=tagU(u);
@@ -231,27 +359,10 @@ function desenharGrafico(m){
   if(chartObj) chartObj.destroy();
   const cores={temperatura:'#f97316',umidade:'#38bdf8',chuva:'#818cf8'};
   const g=dados.map(d=>({hora:d.hora?d.hora.substring(0,5):'',v:parseFloat(d[m]||0)}));
-  const isChuva=m==='chuva';
   chartObj=new Chart(document.getElementById('chart'),{
-    type:isChuva?'bar':'line',
-    data:{
-      labels:g.map(d=>d.hora),
-      datasets:[{
-        data:g.map(d=>d.v),
-        borderColor:cores[m],
-        backgroundColor:isChuva?cores[m]+'99':cores[m]+'22',
-        borderWidth:isChuva?0:2,
-        pointRadius:0,tension:0.4,fill:!isChuva
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e2535',titleColor:'#94a3b8',bodyColor:'#e2e8f0',borderColor:'#334155',borderWidth:1}},
-      scales:{
-        x:{grid:{color:'#1e2535'},ticks:{color:'#475569',font:{size:9},maxTicksLimit:8}},
-        y:{grid:{color:'#1e2535'},ticks:{color:'#475569',font:{size:9}}}
-      }
-    }
+    type:m==='chuva'?'bar':'line',
+    data:{labels:g.map(d=>d.hora),datasets:[{data:g.map(d=>d.v),borderColor:cores[m],backgroundColor:m==='chuva'?cores[m]+'99':cores[m]+'22',borderWidth:m==='chuva'?0:2,pointRadius:0,tension:0.4,fill:m!=='chuva'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1e2535',titleColor:'#94a3b8',bodyColor:'#e2e8f0',borderColor:'#334155',borderWidth:1}},scales:{x:{grid:{color:'#1e2535'},ticks:{color:'#475569',font:{size:9},maxTicksLimit:8}},y:{grid:{color:'#1e2535'},ticks:{color:'#475569',font:{size:9}}}}}
   });
 }
 
