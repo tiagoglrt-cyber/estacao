@@ -169,7 +169,7 @@ function setBadge(mode){
 
 async function carregar(forcar=false){
   try {
-    const hoje=new Date().toISOString().split('T')[0];
+   const hoje=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'}).split('/').reverse().join('-');
     const r=await fetch(`${SUPA_URL}/leituras_horarias?data=eq.${hoje}&order=hora.asc`,
       {headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
     if(!r.ok) throw new Error();
